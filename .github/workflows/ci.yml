@@ -49,15 +49,22 @@ jobs:
           rm -f OuterloopLabApi.sln
           rm -f OuterloopLabApi/OuterloopLabApi.sln
 
-          dotnet new sln -n OuterloopLabApi
-
           echo "PWD: $(pwd)"
-          echo "Contents (depth 2):"
-          find . -maxdepth 2 -type f -name "*.sln" -print
+          echo "Listing current dir:"; ls -la
+
+          NEW_SLN_OUT=$(dotnet new sln -n OuterloopLabApi 2>&1)
+          echo "$NEW_SLN_OUT"
+
+          echo "Searching for .sln files (current dir, up to 10 levels):"
+          find . -maxdepth 10 -type f -name "*.sln" -print
+          echo "Searching for OuterloopLabApi.sln (current dir):"
+          find . -type f -name "OuterloopLabApi.sln" -print
+          echo "Searching for OuterloopLabApi.sln one level up:" 
+          find .. -maxdepth 6 -type f -name "OuterloopLabApi.sln" -print
 
           # Force the solution to the exact expected path: ./OuterloopLabApi.sln
           if [ ! -f ./OuterloopLabApi.sln ]; then
-            FOUND_PATH=$(find . -maxdepth 2 -type f -name "OuterloopLabApi.sln" -print | head -n 1)
+            FOUND_PATH=$(find . -type f -name "OuterloopLabApi.sln" -print | head -n 1)
             if [ -n "$FOUND_PATH" ]; then
               echo "Moving $FOUND_PATH -> ./OuterloopLabApi.sln"
               mv "$FOUND_PATH" ./OuterloopLabApi.sln
@@ -66,7 +73,8 @@ jobs:
 
           if [ ! -f ./OuterloopLabApi.sln ]; then
             echo "Failed to locate OuterloopLabApi.sln after dotnet new sln"
-            find . -maxdepth 2 -type f -name "*.sln" -print
+            ls -la
+            find . -maxdepth 10 -type f -name "*.sln" -print
             exit 1
           fi
 
