@@ -51,12 +51,25 @@ jobs:
 
           dotnet new sln -n OuterloopLabApi
 
-          # dotnet should create ./OuterloopLabApi.sln, but make the step resilient.
-          if [ ! -f ./OuterloopLabApi.sln ] && [ -f ./OuterloopLabApi/OuterloopLabApi.sln ]; then
-            mv ./OuterloopLabApi/OuterloopLabApi.sln ./OuterloopLabApi.sln
+          echo "PWD: $(pwd)"
+          echo "Contents (depth 2):"
+          find . -maxdepth 2 -type f -name "*.sln" -print
+
+          # Force the solution to the exact expected path: ./OuterloopLabApi.sln
+          if [ ! -f ./OuterloopLabApi.sln ]; then
+            FOUND_PATH=$(find . -maxdepth 2 -type f -name "OuterloopLabApi.sln" -print | head -n 1)
+            if [ -n "$FOUND_PATH" ]; then
+              echo "Moving $FOUND_PATH -> ./OuterloopLabApi.sln"
+              mv "$FOUND_PATH" ./OuterloopLabApi.sln
+            fi
           fi
 
-          test -f ./OuterloopLabApi.sln
+          if [ ! -f ./OuterloopLabApi.sln ]; then
+            echo "Failed to locate OuterloopLabApi.sln after dotnet new sln"
+            find . -maxdepth 2 -type f -name "*.sln" -print
+            exit 1
+          fi
+
           dotnet sln ./OuterloopLabApi.sln add OuterloopLabApi/OuterloopLabApi.csproj
           dotnet sln ./OuterloopLabApi.sln add Tests/Tests.csproj
           dotnet restore
