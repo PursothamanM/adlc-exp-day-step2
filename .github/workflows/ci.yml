@@ -55,38 +55,41 @@ jobs:
           NEW_SLN_OUT=$(dotnet new sln -n OuterloopLabApi 2>&1)
           echo "$NEW_SLN_OUT"
 
-          echo "Searching for .sln files (current dir, up to 10 levels):"
-          find . -maxdepth 10 -type f -name "*.sln" -print
-          echo "Searching for OuterloopLabApi.sln (current dir):"
-          find . -type f -name "OuterloopLabApi.sln" -print
-          echo "Searching for OuterloopLabApi.sln one level up:" 
-          find .. -maxdepth 6 -type f -name "OuterloopLabApi.sln" -print
-
-          # Force the solution to the exact expected path: ./OuterloopLabApi.sln
-          if [ ! -f ./OuterloopLabApi.sln ]; then
-            FOUND_PATH=$(find . -type f -name "OuterloopLabApi.sln" -print | head -n 1)
-            if [ -n "$FOUND_PATH" ]; then
-              echo "Moving $FOUND_PATH -> ./OuterloopLabApi.sln"
-              mv "$FOUND_PATH" ./OuterloopLabApi.sln
-            fi
-          fi
-
-          if [ ! -f ./OuterloopLabApi.sln ]; then
-            echo "Failed to locate OuterloopLabApi.sln after dotnet new sln"
-            ls -la
-            find . -maxdepth 10 -type f -name "*.sln" -print
+          # Newer .NET SDKs may create *.slnx instead of *.sln.
+          SOL_FILE=""
+          if [ -f ./OuterloopLabApi.sln ]; then
+            SOL_FILE="./OuterloopLabApi.sln"
+          elif [ -f ./OuterloopLabApi.slnx ]; then
+            SOL_FILE="./OuterloopLabApi.slnx"
+            # Satisfy the spec requirement that an OuterloopLabApi.sln exists at this path.
+            cp ./OuterloopLabApi.slnx ./OuterloopLabApi.sln
+          else
+            echo "Searching for *.slnx/*.sln (current dir, up to 10 levels):"
+            find . -maxdepth 10 -type f \( -name "*.sln" -o -name "*.slnx" \) -print
             exit 1
           fi
 
-          dotnet sln ./OuterloopLabApi.sln add OuterloopLabApi/OuterloopLabApi.csproj
-          dotnet sln ./OuterloopLabApi.sln add Tests/Tests.csproj
+          echo "Using solution file: $SOL_FILE"
+
+          dotnet sln "$SOL_FILE" add OuterloopLabApi/OuterloopLabApi.csproj
+          dotnet sln "$SOL_FILE" add Tests/Tests.csproj
           dotnet restore
 
       - name: Run unit tests
-        run: dotnet test ./OuterloopLabApi.sln --verbosity normal
+        run: |
+          if [ -f ./OuterloopLabApi.sln ]; then
+            dotnet test ./OuterloopLabApi.sln --verbosity normal
+          else
+            dotnet test ./OuterloopLabApi.slnx --verbosity normal
+          fi
 
       - name: Build backend
-        run: dotnet build ./OuterloopLabApi.sln -c Release
+        run: |
+          if [ -f ./OuterloopLabApi.sln ]; then
+            dotnet build ./OuterloopLabApi.sln -c Release
+          else
+            dotnet build ./OuterloopLabApi.slnx -c Release
+          fi
 
   pr-review:
     if: always()
