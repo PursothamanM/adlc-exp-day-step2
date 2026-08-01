@@ -17,7 +17,7 @@ RUN rm -f OuterloopLabApi.sln \
   && SOL_FILE="$(if [ -f ./OuterloopLabApi.sln ]; then echo ./OuterloopLabApi.sln; else echo ./OuterloopLabApi.slnx; fi)" \
   && dotnet sln "$SOL_FILE" add OuterloopLabApi/OuterloopLabApi.csproj \
   && dotnet sln "$SOL_FILE" add Tests/Tests.csproj \
-  && dotnet restore \
+  && dotnet restore "$SOL_FILE" \
   && if [ -f ./OuterloopLabApi.sln ]; then \
        dotnet publish ./OuterloopLabApi.sln -c Release -o /app/publish; \
      else \

@@ -73,7 +73,7 @@ jobs:
 
           dotnet sln "$SOL_FILE" add OuterloopLabApi/OuterloopLabApi.csproj
           dotnet sln "$SOL_FILE" add Tests/Tests.csproj
-          dotnet restore
+          dotnet restore "$SOL_FILE"
 
       - name: Run unit tests
         run: |
