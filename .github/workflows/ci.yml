@@ -47,7 +47,16 @@ jobs:
       - name: Restore dependencies
         run: |
           rm -f OuterloopLabApi.sln
-          dotnet new sln -n OuterloopLabApi -o .
+          rm -f OuterloopLabApi/OuterloopLabApi.sln
+
+          dotnet new sln -n OuterloopLabApi
+
+          # dotnet should create ./OuterloopLabApi.sln, but make the step resilient.
+          if [ ! -f ./OuterloopLabApi.sln ] && [ -f ./OuterloopLabApi/OuterloopLabApi.sln ]; then
+            mv ./OuterloopLabApi/OuterloopLabApi.sln ./OuterloopLabApi.sln
+          fi
+
+          test -f ./OuterloopLabApi.sln
           dotnet sln ./OuterloopLabApi.sln add OuterloopLabApi/OuterloopLabApi.csproj
           dotnet sln ./OuterloopLabApi.sln add Tests/Tests.csproj
           dotnet restore
