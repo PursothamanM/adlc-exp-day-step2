@@ -45,13 +45,51 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: |
+          rm -f OuterloopLabApi.sln
+          rm -f OuterloopLabApi/OuterloopLabApi.sln
+
+          echo "PWD: $(pwd)"
+          echo "Listing current dir:"; ls -la
+
+          NEW_SLN_OUT=$(dotnet new sln -n OuterloopLabApi 2>&1)
+          echo "$NEW_SLN_OUT"
+
+          # Newer .NET SDKs may create *.slnx instead of *.sln.
+          SOL_FILE=""
+          if [ -f ./OuterloopLabApi.sln ]; then
+            SOL_FILE="./OuterloopLabApi.sln"
+          elif [ -f ./OuterloopLabApi.slnx ]; then
+            SOL_FILE="./OuterloopLabApi.slnx"
+            # Satisfy the spec requirement that an OuterloopLabApi.sln exists at this path.
+            cp ./OuterloopLabApi.slnx ./OuterloopLabApi.sln
+          else
+            echo "Searching for *.slnx/*.sln (current dir, up to 10 levels):"
+            find . -maxdepth 10 -type f \( -name "*.sln" -o -name "*.slnx" \) -print
+            exit 1
+          fi
+
+          echo "Using solution file: $SOL_FILE"
+
+          dotnet sln "$SOL_FILE" add OuterloopLabApi/OuterloopLabApi.csproj
+          dotnet sln "$SOL_FILE" add Tests/Tests.csproj
+          dotnet restore "$SOL_FILE"
 
       - name: Run unit tests
-        run: dotnet test Tests/Tests.csproj --verbosity normal
+        run: |
+          if [ -f ./OuterloopLabApi.sln ]; then
+            dotnet test ./OuterloopLabApi.sln --verbosity normal
+          else
+            dotnet test ./OuterloopLabApi.slnx --verbosity normal
+          fi
 
       - name: Build backend
-        run: dotnet build -c Release
+        run: |
+          if [ -f ./OuterloopLabApi.sln ]; then
+            dotnet build ./OuterloopLabApi.sln -c Release
+          else
+            dotnet build ./OuterloopLabApi.slnx -c Release
+          fi
 
   pr-review:
     if: always()
